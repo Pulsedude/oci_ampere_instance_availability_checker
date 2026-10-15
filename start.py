@@ -1,13 +1,24 @@
 from rich.console import Console
+from email.message import EmailMessage
+from dotenv import load_dotenv
+import smtplib
 import datetime
 import time
 import sys
 import oci
+import os
 
 console = Console()
 
 config = oci.config.from_file(file_location="./config")
 compute = oci.core.ComputeClient(config)
+
+load_dotenv(dotenv_path="./.env")
+
+# email configs
+sender = os.getenv("SENDER_EMAIL")
+receiver = os.getenv("RECEIVER_EMAIL")
+senders_google_app_password = os.getenv("SENDERS_GOOGLE_APP_PASSWORD")
 
 tenancy_id = config["tenancy"]
 
@@ -46,6 +57,21 @@ try:
                 console.print(f"Status: [bold red]{result.availability_status}[/bold red]")
             else:
                 console.print(f"Status: [bold green]{result.availability_status}[/bold green]")
+                msg = EmailMessage()
+                msg["Subject"] = "Hello from Python"
+                msg["From"] = sender
+                msg["To"] = receiver
+                msg.set_content("This is a free automated email sent using Python and Gmail SMTP.")
+
+                # Connect to Gmail's SMTP server and send
+                try:
+                    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+                        server.login(sender, senders_google_app_password)
+                        server.send_message(msg)
+                    print("Email sent successfully!")
+                except Exception as e:
+                    print(f"Error: {e}")
+                    
             console.print(f"Available count: {result.available_count}")
             console.print(f"Time: {datetime.datetime.now()}")
             console.print()
